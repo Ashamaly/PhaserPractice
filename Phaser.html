@@ -21,7 +21,7 @@
         physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 300 },
+            gravity: { y: 400 },
             debug: false
         }
     },
@@ -33,6 +33,15 @@
     };
 
     var game = new Phaser.Game(config)
+
+    var score = 0
+    var scoreText 
+    var player
+    var stars
+    var bombs
+    var platforms
+    var cursors
+    var gameOver = false
 
     function preload ()
     {
@@ -47,44 +56,25 @@
     }
 
     function create ()
-    {
-        //create keyboard input and set game variables
-        cursors = this.input.keyboard.createCursorKeys()
-        var score = 0
-        var scoreText  
-
-        //create background layer
+    { 
+        //create background
         this.add.image(400, 300, 'sky')
+
         scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', fill: '#000' })
 
         platforms = this.physics.add.staticGroup()
 
-        //build the level
         platforms.create(400, 568, 'ground').setScale(2).refreshBody()
 
         platforms.create(600, 400, 'ground')
         platforms.create(50, 250, 'ground')
         platforms.create(750, 220, 'ground')
 
-        //moving entities
-        player = this.physics.add.sprite(100, 450, "dude")
-        bomb
-        stars = this.physics.add.group({
-            key: 'star',
-            repeat: 11,
-            setXY: { x: 12, y: 0, stepX: 70 }
-        })
-
-        stars.children.iterate(function (child) {
-
-        child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8))
-
-        })
-
+        player = this.physics.add.sprite(200, 450, "dude")
         player.setBounce(0.1)
         player.setCollideWorldBounds(true)
+        // bomb = this.physics.add.sprite(50, 200, 'bomb')
 
-        //craete spritesheet animation
         this.anims.create({
             key: "left",
             frames: this.anims.generateFrameNumbers('dude', {start: 0, end: 3 }),
@@ -105,33 +95,49 @@
             repeat: -1
         })
 
-        function collectStar (player, star)
-            {
-                star.disableBody(true, true);
+        cursors = this.input.keyboard.createCursorKeys()
 
-                score += 10
-                scoreText.setText('Score: ' + score)
-            }
+        stars = this.physics.add.group({
+            key: 'star',
+            repeat: 11,
+            setXY: { x: 12, y: 0, stepX: 70 }
+        })
 
-        //set physics for entities
+        stars.children.iterate(function (child) {
+
+        child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8))
+
+        })
+
+        bomb = this.physics.add.group()
+
         this.physics.add.collider(player, platforms)
         this.physics.add.collider(stars, platforms)
+        this.physics.add.collider(bomb, platforms)
+        
         this.physics.add.overlap(player, stars, collectStar, null, this)
+        this.physics.add.collider(player, bomb, hitBomb, null, this)
         
 
     }
 
     function update ()
     {
+        if (gameOver)
+        {
+            this.add.text(200, 200, "GAME OVER", {fontSize: "72px", fill: "red"})
+            return
+        }
+
         if (cursors.left.isDown)
             {
-                player.setVelocityX(-260)
+                player.setVelocityX(-360)
 
                 player.anims.play('left', true)
             }
             else if (cursors.right.isDown)
             {
-                player.setVelocityX(260)
+                player.setVelocityX(360)
 
                 player.anims.play('right', true)
             }
@@ -144,7 +150,7 @@
 
             if (cursors.up.isDown && player.body.touching.down)
             {
-                player.setVelocityY(-330)
+                player.setVelocityY(-430)
             }
 
             if (cursors.down.isDown)
@@ -156,7 +162,42 @@
             {
                 player.setBounce(0.1)
             }
-    }
+        }
+            
+    function collectStar (player, star)
+        {
+            star.disableBody(true, true);
+
+            score += 10
+            scoreText.setText('Score: ' + score)
+
+            if (stars.countActive(true) === 0)
+            {
+                stars.children.iterate(function (child) {
+                    child.enableBody(true, child.x, 0, true, true)
+                })
+
+                var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400)
+
+                var bombs = bomb.create(x, 16, 'bomb')
+                bombs.setBounce(1)
+                bombs.setCollideWorldBounds(true)
+                bombs.setVelocity(Phaser.Math.Between(-200, 200), 20)
+                bombs.allowGravity = false
+            }
+        }
+
+    function hitBomb (player, bomb)
+        {
+            this.physics.pause();
+
+            player.setTint(0xff0000);
+
+            player.anims.play('turn');
+
+            gameOver = true;
+        }
+    
 
 </script>
 
